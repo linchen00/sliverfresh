@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../core/fresh_state.dart';
+import '../l10n/sliver_fresh_localizations.dart';
 import 'custom_footer.dart';
 
 class ClassicFooter extends StatelessWidget {
   const ClassicFooter({
     super.key,
     this.height = 60,
-    this.idleText = '上拉加载更多',
-    this.armedText = '释放立即加载',
-    this.loadingText = '正在加载…',
-    this.failedText = '加载失败，上拉重试',
-    this.noMoreText = '没有更多数据了',
+    this.idleText,
+    this.armedText,
+    this.loadingText,
+    this.failedText,
+    this.noMoreText,
   });
 
   final double height;
-  final String idleText;
-  final String armedText;
-  final String loadingText;
-  final String failedText;
-  final String noMoreText;
+  final String? idleText;
+  final String? armedText;
+  final String? loadingText;
+  final String? failedText;
+  final String? noMoreText;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +33,7 @@ class ClassicFooter extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[icon, const SizedBox(width: 8)],
-              Text(_text(status)),
+              Text(_text(context, status)),
             ],
           ),
         );
@@ -59,18 +60,19 @@ class ClassicFooter extends StatelessWidget {
     }
   }
 
-  String _text(LoadStatus status) {
+  String _text(BuildContext context, LoadStatus status) {
+    final l10n = SliverFreshLocalizations.of(context);
     switch (status) {
       case LoadStatus.idle:
-        return idleText;
+        return idleText ?? l10n.loadIdleText;
       case LoadStatus.armed:
-        return armedText;
+        return armedText ?? l10n.loadArmedText;
       case LoadStatus.loading:
-        return loadingText;
+        return loadingText ?? l10n.loadingText;
       case LoadStatus.failed:
-        return failedText;
+        return failedText ?? l10n.loadFailedText;
       case LoadStatus.noMore:
-        return noMoreText;
+        return noMoreText ?? l10n.loadNoMoreText;
     }
   }
 }

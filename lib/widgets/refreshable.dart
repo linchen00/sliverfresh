@@ -22,7 +22,6 @@ class Refreshable extends StatelessWidget {
     this.footer = const ClassicFooter(),
     this.refreshTriggerDistance = 60,
     this.loadTriggerDistance = 60,
-    this.autoLoadWhenShort = true,
   });
 
   final FreshState state;
@@ -35,7 +34,6 @@ class Refreshable extends StatelessWidget {
   final Widget footer;
   final double refreshTriggerDistance;
   final double loadTriggerDistance;
-  final bool autoLoadWhenShort;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +57,6 @@ class Refreshable extends StatelessWidget {
             controller: controller,
             onLoad: onLoad,
             triggerDistance: loadTriggerDistance,
-            autoLoadWhenShort: autoLoadWhenShort,
             child: footer,
           ),
       ],

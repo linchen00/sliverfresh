@@ -30,7 +30,7 @@ class _SliverPullRefreshState extends State<SliverPullRefresh> {
   double _extent = 0;
   double _lastPulled = 0;
   bool _collapsing = false;
-  bool _collapseSawPull = false; // 收起开始后，是否已经看到过 pulled > 0
+  bool _collapseSawPull = false;
 
   bool _hasLayoutExtent = false;
   bool _fingerDown = false;
@@ -42,8 +42,6 @@ class _SliverPullRefreshState extends State<SliverPullRefresh> {
     widget.state.refreshState.addListener(_onStatusChanged);
     widget.controller?.attachRefresh(_requestRefresh);
 
-    // 遗留的过渡状态归位。不能直接写：initState 在 build 阶段，
-    // 别的监听者会在 build 期间 setState 而报错，所以推迟到帧后
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (widget.state.refreshState.value != RefreshStatus.idle) {
@@ -105,7 +103,7 @@ class _SliverPullRefreshState extends State<SliverPullRefresh> {
 
     if (!mounted) return;
     if (widget.state.refreshState.value != RefreshStatus.idle) return;
-    if ((position.pixels - target).abs() > 1) return; // 动画被用户手指打断了
+    if ((position.pixels - target).abs() > 1) return;
     _startRefresh();
   }
 
@@ -117,16 +115,14 @@ class _SliverPullRefreshState extends State<SliverPullRefresh> {
   }
 
   Future<void> _collapse(RefreshStatus shown) async {
-    // 停留一会儿，让用户看到"成功/失败"
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
-    // 停留期间状态被改过（比如又触发了新的刷新），就不再收起
+
     if (widget.state.refreshState.value != shown) return;
 
     _collapsing = true;
     _collapseSawPull = false;
-    // 关闭占位，开始收起；状态保持 completed / failed，
-    // 等回弹结束后由 _onScroll 切回 idle
+
     setState(() => _hasLayoutExtent = false);
   }
 
@@ -135,7 +131,6 @@ class _SliverPullRefreshState extends State<SliverPullRefresh> {
 
     final pulled = n.metrics.pixels < 0 ? -n.metrics.pixels : 0.0;
 
-    // 收起阶段：等回弹结束（pulled 先大于 0，再回到 0）
     if (_collapsing) {
       if (n is ScrollUpdateNotification) {
         if (pulled > 0) {
@@ -151,17 +146,14 @@ class _SliverPullRefreshState extends State<SliverPullRefresh> {
       return;
     }
 
-    // 只在 idle、armed 时响应手指
     final status = widget.state.refreshState.value;
     if (status != RefreshStatus.idle && status != RefreshStatus.armed) return;
 
     if (n is ScrollUpdateNotification) {
-      // 1. 更新给 header 的距离，只在变化时重建
       if (pulled != _extent) {
         setState(() => _extent = pulled);
       }
 
-      // 2. 状态推进
       if (n.dragDetails != null) {
         _fingerDown = true;
         if (pulled >= widget.triggerDistance && status == RefreshStatus.idle) {
@@ -171,7 +163,6 @@ class _SliverPullRefreshState extends State<SliverPullRefresh> {
           widget.state.refreshState.value = RefreshStatus.idle;
         }
       } else if (_fingerDown && pulled != _lastPulled) {
-        // 手指已松开：上一条还在拖，这一条没有 dragDetails 且位置变了
         _fingerDown = false;
         if (status == RefreshStatus.armed) _startRefresh();
       }

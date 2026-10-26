@@ -3,37 +3,38 @@ import 'package:flutter/material.dart';
 import 'package:sliverfresh/indicator/custom_header.dart';
 
 import '../core/fresh_state.dart';
+import '../l10n/sliver_fresh_localizations.dart';
 
 class ClassicHeader extends StatelessWidget {
   const ClassicHeader({
     super.key,
     this.height = 60,
-    this.idleText = '下拉刷新',
-    this.armedText = '释放立即刷新',
-    this.refreshingText = '正在刷新…',
-    this.completedText = '刷新成功',
-    this.failedText = '刷新失败',
+    this.idleText,
+    this.armedText,
+    this.refreshingText,
+    this.completedText,
+    this.failedText,
   });
 
   final double height;
-  final String idleText;
-  final String armedText;
-  final String refreshingText;
-  final String completedText;
-  final String failedText;
+  final String? idleText;
+  final String? armedText;
+  final String? refreshingText;
+  final String? completedText;
+  final String? failedText;
 
   @override
   Widget build(BuildContext context) {
     return CustomHeader(
       builder: (context, status, extent) {
         return SizedBox(
-          height: height, // 必须有确定高度，它就是刷新时撑住的高度
+          height: height,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _icon(status),
               const SizedBox(width: 8),
-              Text(_text(status)),
+              Text(_text(context, status)),
             ],
           ),
         );
@@ -56,18 +57,19 @@ class ClassicHeader extends StatelessWidget {
     }
   }
 
-  String _text(RefreshStatus status) {
+  String _text(BuildContext context, RefreshStatus status) {
+    final l10n = SliverFreshLocalizations.of(context);
     switch (status) {
       case RefreshStatus.idle:
-        return idleText;
+        return idleText ?? l10n.refreshIdleText;
       case RefreshStatus.armed:
-        return armedText;
+        return armedText ?? l10n.refreshArmedText;
       case RefreshStatus.refreshing:
-        return refreshingText;
+        return refreshingText ?? l10n.refreshingText;
       case RefreshStatus.completed:
-        return completedText;
+        return completedText ?? l10n.refreshCompletedText;
       case RefreshStatus.failed:
-        return failedText;
+        return failedText ?? l10n.refreshFailedText;
     }
   }
 }

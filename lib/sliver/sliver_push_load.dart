@@ -12,24 +12,21 @@ class SliverPushLoad extends StatefulWidget {
   const SliverPushLoad({
     super.key,
     required this.state,
-    required this.child,
-    required this.triggerDistance,
     this.controller,
+    required this.triggerDistance,
     this.onLoad,
-    this.autoLoadWhenShort = true,
+    required this.child,
   });
 
   final FreshState state;
+
   final FreshController? controller;
 
-  /// 加载结果由业务通过 state 报告：loadComplete / loadFailed / loadNoData。
-  /// 抛出异常时会自动 loadFailed。
   final Future<void> Function()? onLoad;
-  final Widget child;
+
   final double triggerDistance;
 
-  /// 内容不足一屏时自动触发加载（内容没有增长则不再重复触发）
-  final bool autoLoadWhenShort;
+  final Widget child;
 
   @override
   State<SliverPushLoad> createState() => _SliverPushLoadState();
@@ -41,7 +38,7 @@ class _SliverPushLoadState extends State<SliverPushLoad> {
   double _extent = 0;
   double _lastPulled = 0;
   bool _fingerDown = false;
-  bool _loading = false; // 同步的重入保护，不依赖延迟写入的状态
+  bool _loading = false;
   bool _requesting = false;
   double? _lastAutoPreceding;
   late LoadStatus _lastStatus;
@@ -53,7 +50,6 @@ class _SliverPushLoadState extends State<SliverPushLoad> {
     widget.state.loadState.addListener(_onStatusChanged);
     widget.controller?.attachLoad(_requestLoad);
 
-    // 外部持有的 state 可能遗留过渡状态，归位（noMore 是数据结论，保留）
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final s = widget.state.loadState.value;
@@ -98,7 +94,6 @@ class _SliverPushLoadState extends State<SliverPushLoad> {
 
   void _onStatusChanged() {
     final status = widget.state.loadState.value;
-    // noMore 被重置后，内容长度的基准作废，允许再次自动加载
     if (_lastStatus == LoadStatus.noMore && status == LoadStatus.idle) {
       _lastAutoPreceding = null;
     }
@@ -116,6 +111,14 @@ class _SliverPushLoadState extends State<SliverPushLoad> {
     final pulled = math.max(0.0, n.metrics.pixels - n.metrics.maxScrollExtent);
 
     if (n is ScrollUpdateNotification) {
+      if (!_requesting &&
+          status == LoadStatus.idle &&
+          widget.state.refreshState.value == RefreshStatus.idle &&
+          n.metrics.extentAfter < widget.triggerDistance) {
+        _startLoad();
+        return;
+      }
+
       final canTrack = status == LoadStatus.idle || status == LoadStatus.armed;
       if (canTrack && pulled != _extent) {
         setState(() => _extent = pulled);
@@ -130,7 +133,6 @@ class _SliverPushLoadState extends State<SliverPushLoad> {
           widget.state.loadState.value = LoadStatus.idle;
         }
       } else if (_fingerDown && pulled != _lastPulled) {
-        // 手指已松开
         _fingerDown = false;
         if (status == LoadStatus.armed ||
             (status == LoadStatus.failed && pulled >= widget.triggerDistance)) {
@@ -150,41 +152,23 @@ class _SliverPushLoadState extends State<SliverPushLoad> {
     _fingerDown = false;
     _extent = 0;
     widget.state.loadState.value = LoadStatus.loading;
-    _run(widget.state, onLoad);
+    onLoad();
   }
 
-  Future<void> _run(FreshState state, Future<void> Function() onLoad) async {
-    try {
-      await onLoad();
-    } catch (error, stack) {
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: error,
-          stack: stack,
-          library: 'sliverfresh',
-          context: ErrorDescription('while running onLoad'),
-        ),
-      );
-      state.loadFailed();
-    }
-  }
-
-  /// controller.requestLoad()：像手指上拉一样把 footer 拉出来，再开始加载
   Future<void> _requestLoad() async {
     if (_loading || _requesting || widget.onLoad == null) return;
     final status = widget.state.loadState.value;
     if (status == LoadStatus.failed) {
-      _startLoad(); // footer 已经在占位，直接重试
+      _startLoad();
       return;
     }
     if (status != LoadStatus.idle) return;
 
     final position = Scrollable.maybeOf(context)?.position;
-    final render = context.findRenderObject();
-    if (position == null || render is! RenderSliverPushLoad) return;
+    if (position == null) return;
 
     _requesting = true;
-    final target = position.maxScrollExtent + render.indicatorExtent;
+    final target = position.maxScrollExtent;
     try {
       await position.animateTo(
         target,
@@ -197,13 +181,12 @@ class _SliverPushLoadState extends State<SliverPushLoad> {
 
     if (!mounted) return;
     if (widget.state.loadState.value != LoadStatus.idle) return;
-    if ((position.pixels - target).abs() > 1) return; // 被手指打断
+    if ((position.pixels - target).abs() > 1) return;
     _startLoad();
   }
 
-  /// 内容不足一屏时自动加载；内容没有增长就不再触发，避免死循环
   void _onContentLayout(double preceding, bool unfilled) {
-    if (!mounted || !widget.autoLoadWhenShort || !unfilled) return;
+    if (!mounted || !unfilled) return;
     if (widget.onLoad == null || _loading) return;
     if (widget.state.loadState.value != LoadStatus.idle) return;
     if (widget.state.refreshState.value != RefreshStatus.idle) return;
@@ -218,12 +201,8 @@ class _SliverPushLoadState extends State<SliverPushLoad> {
     return ValueListenableBuilder<LoadStatus>(
       valueListenable: widget.state.loadState,
       builder: (context, status, _) {
-        final hold =
-            status == LoadStatus.loading ||
-            status == LoadStatus.failed ||
-            status == LoadStatus.noMore;
         return _PushLoadRenderWidget(
-          hasLayoutExtent: hold,
+          hasLayoutExtent: true,
           onContentLayout: _onContentLayout,
           child: LoadScope(
             status: status,

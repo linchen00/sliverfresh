@@ -8,3 +8,4 @@ export 'package:sliverfresh/indicator/fresh_scope.dart';
 export 'package:sliverfresh/sliver/sliver_pull_refresh.dart';
 export 'package:sliverfresh/sliver/sliver_push_load.dart';
 export 'package:sliverfresh/widgets/refreshable.dart';
+export 'package:sliverfresh/l10n/sliver_fresh_localizations.dart';

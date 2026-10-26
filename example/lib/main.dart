@@ -1,63 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:sliverfresh/sliverfresh.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+import 'pages/animated_list_page.dart';
+import 'pages/basic_page.dart';
+import 'pages/custom_indicator_page.dart';
+import 'pages/custom_scroll_view_page.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+void main() => runApp(const ExampleApp());
+
+class ExampleApp extends StatelessWidget {
+  const ExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final delegate = SliverFreshLocalizations.delegate();
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      localizationsDelegates: [
+        delegate,
+        ...GlobalMaterialLocalizations.delegates,
+      ],
+      supportedLocales: delegate.supportedLocales,
+      home: const Home(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
+class Home extends StatelessWidget {
+  const Home({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final pages = <String, Widget>{
+      '基础用法': const BasicPage(),
+      '自定义指示器': const CustomIndicatorPage(),
+      '直接用 sliver': const CustomScrollViewPage(),
+      'SliverAnimatedList': const AnimatedListPage(),
+    };
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      appBar: AppBar(title: const Text('sliverfresh')),
+      body: ListView(
+        children: [
+          for (final e in pages.entries)
+            ListTile(
+              title: Text(e.key),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => e.value),
+              ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        ],
       ),
     );
   }
